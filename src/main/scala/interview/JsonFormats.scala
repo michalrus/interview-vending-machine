@@ -25,7 +25,8 @@ object JsonFormats {
       def read(v: JsValue): T  = out(fv.read(v))
     }
 
-  implicit val moneyFormat   = tagFormat[Money, Int](_.v, Money)
-  implicit val productFormat = jsonFormat4(Product)
-  implicit val paymentFormat = jsonFormat1(Payment)
+  implicit val moneyFormat               = tagFormat[Money, Int](_.v, Money)
+  implicit val productFormat             = jsonFormat4(Product)
+  implicit val productAvailabilityFormat = jsonFormat2(ProductAvailability)
+  implicit val paymentFormat             = jsonFormat1(Payment)
 }

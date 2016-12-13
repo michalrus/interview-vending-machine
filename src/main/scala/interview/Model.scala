@@ -5,7 +5,7 @@ import org.joda.time.DateTime
 
 object Model {
 
-  final case class MachineState(available: List[Product],
+  final case class MachineState(available: List[ProductAvailability],
                                 currentlySelected: List[Product],
                                 pastTransactions: List[Transaction],
                                 balance: Money)
@@ -34,5 +34,6 @@ object Model {
   sealed trait PaymentResult
   final case class PaymentSucceeded(change: Money)       extends PaymentResult
   final case class PayedTooLittle(expectedAmount: Money) extends PaymentResult
+  case object UnableToMakeChange                         extends PaymentResult
 
 }

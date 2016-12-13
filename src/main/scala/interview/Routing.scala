@@ -17,8 +17,10 @@ object Routing {
         get(complete(persistence.availableProducts))
       } ~
         pathPrefix(JavaUUID) { uuid ⇒
-          path("select")(post(complete(persistence.select(uuid)))) ~
-            path("deselect")(post(complete(persistence.deselect(uuid))))
+          rejectEmptyResponse {
+            path("select")(post(complete(persistence.select(uuid)))) ~
+              path("deselect")(post(complete(persistence.deselect(uuid))))
+          }
         }
     } ~
       path("current-selection") {
@@ -32,6 +34,10 @@ object Routing {
                 case PayedTooLittle(expectedAmount) ⇒
                   complete(
                     (StatusCodes.PaymentRequired, expectedAmount.v.toString))
+                case UnableToMakeChange ⇒
+                  complete(
+                    (StatusCodes.RetryWith,
+                     "Unable to make change. Try providing the exact amount."))
                 case PaymentSucceeded(change) ⇒
                   complete(change.v.toString)
               }
