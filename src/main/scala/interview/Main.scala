@@ -15,9 +15,10 @@ object Main {
     implicit val executionContext: ExecutionContext = system.dispatcher
 
     val bindingFuture =
-      Http().bindAndHandle(Routing.route(new Persistence(InitialState)),
-                           Host,
-                           Port)
+      Http().bindAndHandle(
+        Routing.route(new Persistence(InitialState, system)),
+        Host,
+        Port)
 
     system.log.info(s"Running at http://$Host:$Port/\nPress <RET> to stop…")
     val _ = StdIn.readLine()

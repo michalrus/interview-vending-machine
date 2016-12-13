@@ -1,15 +1,20 @@
 package interview
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.reflect.ClassTag
+import akka.actor.{Actor, ActorSystem, Props}
+import akka.pattern.ask
+import akka.util.Timeout
 import akka.Done
 import java.util.UUID
 import org.joda.time.DateTime
 import Model._
 
-final class Persistence(initialState: MachineState) {
+final class Persistence(initialState: MachineState, actorSystem: ActorSystem) {
 
   def availableProducts: Future[List[ProductAvailability]] = withState { s ⇒
-    Future.successful((s, s.available))
+    (s, s.available)
   }
 
   /* If such productUUID really is available, decrease its availability
@@ -28,7 +33,7 @@ final class Persistence(initialState: MachineState) {
       )
     } yield newState
 
-    Future.successful((newState getOrElse s, newState map (_ ⇒ Done)))
+    (newState getOrElse s, newState map (_ ⇒ Done))
   }
 
   /* Remove the UUID from current selection, and if is available
@@ -41,11 +46,11 @@ final class Persistence(initialState: MachineState) {
           if (av.product.uuid == productUUID) av.copy(amount = av.amount + 1)
           else av)
     )
-    Future.successful((newState, Done))
+    (newState, Done)
   }
 
   def currentSelection: Future[List[Product]] = withState { s ⇒
-    Future.successful((s, s.currentlySelected))
+    (s, s.currentlySelected)
   }
 
   /* Cancel the whole order/selection. */
@@ -57,36 +62,51 @@ final class Persistence(initialState: MachineState) {
           av.copy(amount = av.amount + s.currentlySelected.count(
               _.uuid == av.product.uuid)))
     )
-    Future.successful((newState, Done))
+    (newState, Done)
   }
 
   def pay(payment: Payment): Future[PaymentResult] = withState { s ⇒
     val total = s.currentlySelected.map(_.price.v).sum
-    Future
-      .successful(
-        if (payment.amount.v < total)
-          (s, PayedTooLittle(Money(total)))
-        else {
-          val change = payment.amount.v - total
-          if (change > s.balance.v)
-            (s, UnableToMakeChange)
-          else
-            (s.copy(
-               balance = Money(s.balance.v + payment.amount.v),
-               currentlySelected = Nil,
-               pastTransactions = Transaction(
-                   DateTime.now,
-                   s.currentlySelected) :: s.pastTransactions
-             ),
-             PaymentSucceeded(Money(change)))
-        }
-      )
+
+    if (payment.amount.v < total)
+      (s, PayedTooLittle(Money(total)))
+    else {
+      val change = payment.amount.v - total
+      if (change > s.balance.v)
+        (s, UnableToMakeChange)
+      else
+        (s.copy(
+           balance = Money(s.balance.v + payment.amount.v),
+           currentlySelected = Nil,
+           pastTransactions = Transaction(DateTime.now, s.currentlySelected) :: s.pastTransactions
+         ),
+         PaymentSucceeded(Money(change)))
+    }
   }
 
-  /* Ideal use case for the State monad? =) */
-  private def withState[T](
-      action: MachineState ⇒ Future[(MachineState, T)]): Future[T] = {
-    ???
+  /* So we need some way to ensure that the current state is accessed
+   * and changed *sequentially*. Java’s AtomicReference might be
+   * tempting, but we wouldn’t get this property from it. Let’s wrap
+   * the state in an actor. BTW, wouldn’t this be a good use case for
+   * the State monad? But a concurrent one. =) */
+  private def withState[T: ClassTag](
+      action: MachineState ⇒ (MachineState, T)): Future[T] = {
+    implicit val tmout: Timeout = 1.second
+    (Internal.actor ? Internal.Perform(action)).mapTo[T]
+  }
+
+  @SuppressWarnings(Array("org.wartremover.warts.Any")) // Actors…
+  private object Internal {
+    final case class Perform[T](action: MachineState ⇒ (MachineState, T))
+    val actor = actorSystem.actorOf(Props(new Actor {
+      def receive = state(initialState)
+      def state(s: MachineState): Receive = {
+        case Perform(action) ⇒
+          val (newS, t) = action(s)
+          sender ! t
+          context.become(state(newS))
+      }
+    }))
   }
 
 }
