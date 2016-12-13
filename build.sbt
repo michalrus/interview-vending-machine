@@ -37,9 +37,12 @@ lazy val root = (project in file("."))
       .value,
     (compile in Compile) <<= (compile in Compile) dependsOn compileScalastyle,
     libraryDependencies ++= Seq(
-      "joda-time"      % "joda-time"    % "2.9.6",
-      "org.joda"       % "joda-convert" % "1.8",
-      "org.scalatest"  %% "scalatest"   % "2.2.4" % "test",
-      "org.scalacheck" %% "scalacheck"  % "1.12.5" % "test"
+      "joda-time"         % "joda-time"             % "2.9.6",
+      "org.joda"          % "joda-convert"          % "1.8",
+      "com.typesafe.akka" %% "akka-actor"           % "2.4.14",
+      "com.typesafe.akka" %% "akka-http"            % "10.0.0",
+      "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.0",
+      "org.scalatest"     %% "scalatest"            % "2.2.4" % "test",
+      "org.scalacheck"    %% "scalacheck"           % "1.12.5" % "test"
     )
   )

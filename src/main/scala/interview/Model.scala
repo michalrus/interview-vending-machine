@@ -29,4 +29,10 @@ object Model {
   /* TODO: Rename this to something more appropriate. */
   final case class ProductAvailability(product: Product, amount: Int)
 
+  final case class Payment(amount: Money)
+
+  sealed trait PaymentResult
+  final case class PaymentSucceeded(change: Money)       extends PaymentResult
+  final case class PayedTooLittle(expectedAmount: Money) extends PaymentResult
+
 }
