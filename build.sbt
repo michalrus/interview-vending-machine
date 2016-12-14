@@ -29,7 +29,7 @@ lazy val root = (project in file("."))
                                      "-Ywarn-unused",
                                      "-Ywarn-unused-import",
                                      "-Ywarn-value-discard"),
-    wartremoverErrors ++= Warts.all,
+    wartremoverErrors in (Compile, compile) ++= Warts.all,
     scalastyleFailOnError := true,
     compileScalastyle := org.scalastyle.sbt.ScalastylePlugin.scalastyle
       .in(Compile)
@@ -43,6 +43,7 @@ lazy val root = (project in file("."))
       "com.typesafe.akka" %% "akka-http"            % "10.0.0",
       "com.typesafe.akka" %% "akka-http-spray-json" % "10.0.0",
       "org.scalatest"     %% "scalatest"            % "2.2.4" % "test",
-      "org.scalacheck"    %% "scalacheck"           % "1.12.5" % "test"
+      "org.scalacheck"    %% "scalacheck"           % "1.12.5" % "test",
+      "com.typesafe.akka" %% "akka-http-testkit"    % "10.0.0" % "test"
     )
   )
